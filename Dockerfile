@@ -12,10 +12,8 @@ RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y openssh-server vim
 
 # Create the user with home directory and password and the /home/${USER}/.ssh directory, creating /home/${USER}/.ssh and
-# creating a symbolic link pointing to the secret file from ~/.ssh/authorized_keys
 RUN useradd -m ${USER} && echo "${USER}:${PSWD}" | chpasswd &&\
     mkdir -p /home/${USER}/.ssh &&\
-    ln -s /run/secrets/user_ssh_rsa /home/${USER}/.ssh/authorized_keys &&\
     chown -R ${USER}:${USER} /home/${USER}/.ssh/authorized_keys
 
 # Configuring te server to no StringHostkeyChecking

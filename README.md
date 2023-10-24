@@ -33,16 +33,12 @@ To run the ssh service inside a container, we have choosen the basic [ubuntu doc
 
 To check the modifications take a look into the [Dockerfile](Dockerfile).
 
-I will highlight 2 steps:
+I will highlight:
 - We modify the configuration of SSH to enable `RSAAuthentication` and `PubkeyAuthentication` while disable `PasswordAuthentication`. Also we configure it to ignore `Rhosts` and permissions to the folder:
 ```Dockerfile
 RUN chown -R ${USER}:${USER} /home/${USER}/.ssh &&\
     echo "Host remotehost\n\tStrictHostKeyChecking no\n" >> /home/${USER}/.ssh/config &&\
     echo "RSAAuthentication yes\nPubkeyAuthentication yes\nPasswordAuthentication no\nIgnoreRhosts yes" >> /etc/ssh/sshd_config
-```
-- We add a symbolic link in the file `/home/${USER}/.ssh/authorized_keys` of the container pointing to the content of the secret `user_ssh_rsa` which is stored under `/run/secrets/user_ssh_rsa` because it is configured in [docker-compose.yaml](docker-compose.yaml) like secret inside the container
-```Dockerfile
-RUN ... ln -s /run/secrets/user_ssh_rsa /home/${USER}/.ssh/authorized_keys
 ```
 
 ### 2.2 Building the image
@@ -59,16 +55,12 @@ docker build -t ubuntu:ssh .
 >```
 
 ## 3. Run the container using docker compose
-We have generated a very simple [docker-compose.yaml](docker-compose.yaml) file configuring a **secret** inside the container with the content of the local file `~/.ssh/id_rsa_shared` and consumed by `~/.ssh/authorized_keys` file of the docker server.
+We have generated a very simple [docker-compose.yaml](docker-compose.yaml) file configuring a **bind volume** pointing from the `~/.ssh/id_rsa_shared` of the localhost to the `~/.ssh/authorized_keys` directory of the docker server.
 
 ```yaml
 container:
-    secrets:
-      - user_ssh_rsa
-
-secrets:
-  user_ssh_rsa:
-    file: ~/.ssh/id_rsa_shared.pub
+    volumes:
+      - ~/.ssh/id_rsa_shared.pub:/home/${USR}/.ssh/authorized_keys:ro
 ```
 
 Also, we are using an [.env](.env) to configure [docker-compose.yaml](docker-compose.yaml).
@@ -136,9 +128,6 @@ ssh -oPort=2222 -i ~/.ssh/id_rsa_shared alex@localhost
 ```
 ![im8.png](pictures/im8.png)
 
->:paperclip: If you run the command without specifying user, ssh will take your Linux current user, in my case `acampos`:
-> ![im10.png](pictures/im10.png)
-
 If you use a different user:
 ```bash
 ssh -oPort=2222 -i ~/.ssh/id_rsa_shared custom_user@localhost
@@ -149,21 +138,11 @@ ssh -oPort=2222 -i ~/.ssh/id_rsa_shared custom_user@localhost
 > :warning: **WARNING 2:** When changing the docker container configuration, you will receive the following error: **WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!**
 > ![im9.png](pictures/im9.png)
 >
-> This message appears when you try and connect over SSH to a remote server, and there's a mismatch between the server's public key and what's stored on your local machine.
 > To solve it, you shoul run the following command to reset the host configuration:
 > ```bash
 >ssh-keygen -f "/home/acampos/.ssh/known_hosts" -R "[localhost]:2222"
 >```
 > And run again the ssh command:
 > ```bash
->ssh -oPort=2222 -i ~/.ssh/id_rsa_shared alex@localhost
+>ssh -oPort=2222 -i ~/.ssh/id_rsa_shared custom_user@localhost
 >```
-> You can configure your local host to skip this message and continue with ssh connection, just add to the `~/.ssh/config` file with the following lines:
->```config
->Host localhost
->    StrictHostKeyChecking no
->```
-> Also, you can run the command with the following flag to skip always the keychecking:
->```bash
->ssh -oPort=2222 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa_shared alex@localhost
->``` 

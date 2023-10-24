@@ -5,9 +5,5 @@ services:
     container_name: ubuntu_ssh
     ports:
       - 2222:22
-    secrets:
-      - user_ssh_rsa
-
-secrets:
-  user_ssh_rsa:
-    file: ~/.ssh/id_rsa_shared.pub
+    volumes:
+      - ~/.ssh/id_rsa_shared.pub:/home/${USR}/.ssh/authorized_keys:ro
