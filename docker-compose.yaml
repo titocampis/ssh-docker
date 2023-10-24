@@ -1,0 +1,13 @@
+version: "2.22"
+services:
+  ubuntu:
+    image: ubuntu:ssh
+    container_name: ubuntu_ssh
+    ports:
+      - 2222:22
+    secrets:
+      - user_ssh_rsa
+
+secrets:
+  user_ssh_rsa:
+    file: ~/.ssh/id_rsa_shared.pub
