@@ -29,7 +29,9 @@ ssh-keygen -t rsa -b 4096 -C your_user
 
 ## 2. Build the centos:ssh image
 ### 2.1 Dockerfile
-To run the ssh service inside a container, we have choosen the basic [centos/systemd docker image](https://hub.docker.com/_/centos/systemd/). We have configured the image in order to run the ssh service inside it, and to have the correct files to authenticate the ssh connectivity. [centos/systemd docker image](https://hub.docker.com/_/centos/systemd/) has incorporated the systemd to manage services (like sshd).
+To run the ssh service inside a container, we have choosen the basic [centos/systemd docker image](https://hub.docker.com/r/centos/systemd/). We have configured the image in order to run the ssh service inside it, and to have the correct files to authenticate the ssh connectivity following this [GitHub Project](https://gist.github.com/lenchevsky/7eba11bd491e70105de3600ec9ec1292)
+
+>:paperclip: **NOTE:** We have choosen this image because it has already installed the systemd service, we can also use the `centos:7` image and install in the Dockerfile the `systemd` using `yum install -y systemd`.
 
 To check the modifications take a look into the [Dockerfile](Dockerfile).
 
