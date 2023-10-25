@@ -7,7 +7,7 @@
 ## Content
 1. [Generate SSH RSA key pair](#1-generate-ssh-rsa-key-pair)
 
-2. [Build the ubuntu:ssh image](#2-build-the-ubuntussh-image)
+2. [Build the centos/systemd:ssh image](#2-build-the-centos/systemdssh-image)
     - 2.1 [Dockerfile](#21-dockerfile)
     - 2.2 [Building the image](#22-building-the-image)  
 3. [Run the container using docker compose](#3-run-the-container-using-docker-compose)
@@ -27,41 +27,36 @@ ssh-keygen -t rsa -b 4096 -C your_user
 
 >:paperclip: **NOTE:** There is no need to copy the configuration into the sever because we are going to share it using a volume when running the container.
 
-## 2. Build the ubuntu:ssh image
+## 2. Build the centos/systemd:ssh image
 ### 2.1 Dockerfile
-To run the ssh service inside a container, we have choosen the basic [ubuntu docker image](https://hub.docker.com/_/ubuntu/). We have configured the image in order to run the ssh service inside it, and to have the correct files to authenticate the ssh connectivity.
+To run the ssh service inside a container, we have choosen the basic [centos/systemd docker image](https://hub.docker.com/_/centos/systemd/). We have configured the image in order to run the ssh service inside it, and to have the correct files to authenticate the ssh connectivity. [centos/systemd docker image](https://hub.docker.com/_/centos/systemd/) has incorporated the systemd to manage services (like sshd).
 
 To check the modifications take a look into the [Dockerfile](Dockerfile).
 
 I will highlight:
 - We modify the configuration of SSH to enable `RSAAuthentication` and `PubkeyAuthentication` while disable `PasswordAuthentication`. Also we configure it to ignore `Rhosts` and permissions to the folder:
 ```Dockerfile
-RUN chown -R ${USER}:${USER} /home/${USER}/.ssh &&\
-    echo "Host remotehost\n\tStrictHostKeyChecking no\n" >> /home/${USER}/.ssh/config &&\
-    echo "RSAAuthentication yes\nPubkeyAuthentication yes\nPasswordAuthentication no\nIgnoreRhosts yes" >> /etc/ssh/sshd_config
+RUN sed -ri 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config &&\
+    echo "RSAAuthentication yes" >> /etc/ssh/sshd_config &&\
+    sed -ri 's/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config &&\
+    sed -ri 's/#IgnoreRhosts no/IgnoreRhosts yes/g' /etc/ssh/sshd_config
 ```
 
 ### 2.2 Building the image
 Build the docker image:
 ```bash
-docker build -t ubuntu:ssh .
+docker build -t centos:ssh .
 ```
 - user: alex
 - password: securepassword
 
 > :paperclip: **NOTE:** To create a custom user and password run the `docker build` command using `--build-arg` and modifying `custom_user` and `custom_password`:
 >```bash
-> docker build -t ubuntu:ssh --build-arg USER=custom_user --build-arg PSWD=custom_password
+> docker build -t centos:ssh --build-arg USER=custom_user --build-arg PSWD=custom_password
 >```
 
 ## 3. Run the container using docker compose
-We have generated a very simple [docker-compose.yaml](docker-compose.yaml) file configuring a **bind volume** pointing from the `~/.ssh/id_rsa_shared` of the localhost to the `~/.ssh/authorized_keys` directory of the docker server.
-
-```yaml
-container:
-    volumes:
-      - ~/.ssh/id_rsa_shared.pub:/home/${USR}/.ssh/authorized_keys:ro
-```
+We have generated a simple [docker-compose.yaml](docker-compose.yaml) file configuring a **bind volume** pointing from the `~/.ssh/id_rsa_shared` of the localhost to the `~/.ssh/authorized_keys` directory of the docker server.
 
 Also, we are using an [.env](.env) to configure [docker-compose.yaml](docker-compose.yaml).
 
@@ -79,27 +74,24 @@ Also, we are using an [.env](.env) to configure [docker-compose.yaml](docker-com
 ```bash
 docker compose up -d
 ```
-:two: Check the container logs, you should see:
 
-![im6.png](pictures/im6.png)
-
-:three: Check the container is running:
+:two: Check the container is running:
 ```bash
 docker ps
 ```
-![im1.png](pictures/im1.png)
-
+:three: Check the container logs:
+```bash
+docker logs centos_ssh
+```
 :four: Check the contents of the `/home/$user/.ssh/` folder
 ```bash
-docker exec ubuntu_ssh ls -la /home/alex/.shh
+docker exec centos/systemd_ssh ls -la /home/alex/.shh
 ```
-![im7.png](pictures/im7.png)
 
 :five: Check the container is running the ssh service
 ```bash
-docker exec ubuntu_ssh service ssh status
+docker exec centos/systemd_ssh systemctl status sshd.service
 ```
-![im2.png](pictures/im2.png)
 
 :six: Check the connectivity using `ping`
 ```bash
@@ -126,7 +118,6 @@ So run the following command to stablish connection:
 ```bash
 ssh -oPort=2222 -i ~/.ssh/id_rsa_shared alex@localhost
 ```
-![im8.png](pictures/im8.png)
 
 If you use a different user:
 ```bash
