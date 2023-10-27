@@ -1,4 +1,4 @@
-# Download base image centos/systemd:latest
+# Download base image ubuntu 18.04
 FROM centos/systemd:latest
 
 # Defining the user and password
@@ -9,17 +9,19 @@ ARG PSWD=securepassword
 RUN yum -y update && yum -y upgrade && yum clean all 
 
 # Install openssh-client and different useful binaries (in different stages to cache the update)
-# also configure sshd.service to start when the server boots
-RUN yum -y install openssh-server vim &&\
+#   also configure sshd.service to start when the server boots
+RUN yum -y install openssh-server vim sudo &&\
     systemctl enable sshd.service
 
-# Create the user with home directory and password, create the /home/${USER}/.ssh directory
+# Create the user with home directory and password, give him sudo permissions
+#   add him to the sudo group and create the -p /home/${USER}/.ssh with correct permissions 
 RUN useradd -m ${USER} && echo "${USER}:${PSWD}" | chpasswd &&\
+    usermod -aG wheel alex &&\
     mkdir -p /home/${USER}/.ssh &&\
     chown -R ${USER}:${USER} /home/${USER}/.ssh
 
 # Configuring SSH to only allow PubKeyAuthentication
-# For centos is not possible to configure StrictHostKeyChecking no
+#   for centos is not possible to configure StrictHostKeyChecking no
 RUN sed -ri 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config &&\
     echo "RSAAuthentication yes" >> /etc/ssh/sshd_config &&\
     sed -ri 's/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config &&\
