@@ -144,6 +144,28 @@ If you use a different user:
 ssh -oPort=2222 -i ~/.ssh/id_rsa_shared custom_user@localhost
 ```
 
+> :paperclip: If you want to not pass every time the pubkey you can stored in your ssh default keys using the `ssh-agent`, [documentation](https://www.linode.com/docs/guides/using-ssh-agent/)
+>
+>Starting up ssh-agent:
+>```bash
+> eval `ssh-agent`
+>```
+>
+> Check the `ssh-agent` is running:
+>```bash
+> echo $SSH_AUTH_SOCK
+>```
+>
+> Add the key you want to 
+>```bash
+> ssh-add ~/.ssh/custom_key
+>```
+> 
+> To get a list of all the keys added
+>```bash
+> ssh-add -l
+>```
+
 > :warning: **WARNING 1:** If the SSH RSA public and private key are not inside the `~/.ssh/` of the **local machine** and the SSH RSA public key content inside the `~/.ssh/authorized_keys` file of the remote machine the connection will be refused.
 
 > :warning: **WARNING 2:** When changing the docker container configuration, you will receive the following error: **WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!**
