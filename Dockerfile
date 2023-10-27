@@ -8,18 +8,22 @@ ARG PSWD=securepassword
 # Update Software repository
 RUN apt-get update && apt-get upgrade -y 
 
-# Install openssh-client and vi (in different stages to cache the update)
+# Install openssh-client, vi and sudo (in different stages to cache the update)
 RUN apt-get install -y openssh-server vim
 
+# sudo to can add users to the servers and other sudo actions (in different stages because docker crashes)
+RUN apt-get install -y sudo
+
 # Create the user with home directory and password and the /home/${USER}/.ssh directory, creating /home/${USER}/.ssh and
-# creating a symbolic link pointing to the secret file from ~/.ssh/authorized_keys
+#   creating a symbolic link pointing to the secret file from ~/.ssh/authorized_keys
 RUN useradd -m ${USER} && echo "${USER}:${PSWD}" | chpasswd &&\
+    usermod -aG sudo alex &&\
     mkdir -p /home/${USER}/.ssh &&\
     ln -s /run/secrets/user_ssh_rsa /home/${USER}/.ssh/authorized_keys &&\
     chown -R ${USER}:${USER} /home/${USER}/.ssh/authorized_keys
 
-# Configuring te server to no StringHostkeyChecking
-# Configure server SSH service to only allow PubKeyAuthentication
+# Configuring te server to no StringHostkeyChecking and
+#   configuring server SSH service to only allow PubKeyAuthentication
 RUN echo "Host remotehost\n\tStrictHostKeyChecking no\n" >> /home/${USER}/.ssh/config &&\
     sed -ri 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config &&\
     echo "RSAAuthentication yes" >> /etc/ssh/sshd_config &&\
